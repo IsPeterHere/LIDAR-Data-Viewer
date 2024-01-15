@@ -1,0 +1,18 @@
+
+    {
+    "axis_max": 400000,
+    "axis_min": -200000,
+    "bounding_polygon": [
+        [-999999.5, 1499999.5, 0.0],
+        [999999.5, 1499999.5, 0.0],
+        [999999.5, -1499999.5, 0.0],
+        [-999999.5, -1499999.5, 0.0]
+    ],
+    "class_name": "SelectionPolygonVolume",
+    "orthogonal_axis": "Z",
+    "version_major": 1,
+    "version_minor": 0
+    }
+
+
+            
