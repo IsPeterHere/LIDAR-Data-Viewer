@@ -9,7 +9,7 @@ import pyrr
 #user defined stuff
 
 #folder (within Datasets)
-folder = "Hebrides Aiginis"
+folder = "HareHope"
 
 #colour_map picks between no colour, "normal" map, "intensity"(if included in laz file)
 colour_map = ""
@@ -105,9 +105,10 @@ def apply_bounds(x,y,z,bounds):
     sizey = max(y)-min(y)
 
     box_x = bs[0][1]*sizex
+    box_a = bs[1][1]*sizex
+    
     box_y = bs[1][1]*sizey
-    box_a = bs[0][0]*sizex
-    box_b = bs[1][0]*sizey
+    box_b = bs[0][0]*sizey
 
     centre = [box_a+((box_x-box_a)/2),box_b+((box_y-box_b)/2),0]
 
@@ -122,7 +123,7 @@ def apply_bounds(x,y,z,bounds):
     box_a -= centre[0]
     box_b -= centre[1]
     
-    print(box_x,box_a,box_y,box_b)
+    print("Using Bounds:",str((box_x,box_a)),str((box_y,box_b)))
 
     box_x = np.sign(box_x)*(int(abs(box_x))+[1 if int(abs(box_x)) != abs(box_x) else 0][0])
     box_y = np.sign(box_y)*(int(abs(box_y))+[1 if int(abs(box_y)) != abs(box_y) else 0][0])
@@ -162,7 +163,7 @@ def apply_bounds(x,y,z,bounds):
 
 
 def create_pointcloud(xyz):
-    print(len(xyz))
+    print("Creating Point cloud with ",len(xyz), "points.")
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(xyz)
 
@@ -173,9 +174,19 @@ def crop_pointcloud(pcd):
     vol = o3d.visualization.read_selection_polygon_volume("bound.json")
     selected_pcd = vol.crop_point_cloud(pcd)
 
-    print(selected_pcd)
+    print("Bounding Selected: ",selected_pcd)
 
     return selected_pcd
+
+
+
+
+def add_colours(pcd,red,green,blue):
+
+    cn = np.dstack([red,green,blue])[0]
+    pcd.colors = o3d.utility.Vector3dVector(cn.astype(np.float64))
+
+    print("Colours added: ",pcd.has_colors())
 
 
 def convert_to_normalmap(pcd):
@@ -189,31 +200,8 @@ def convert_to_normalmap(pcd):
     c3 = normals@[-1/2,-1.73,0]
 
     e = np.zeros(shape = [len(normals)])
-    cn = np.dstack([c1,c2,e])[0]
-
-    print(cn.shape,e.shape)
-
-    pcd.colors = o3d.utility.Vector3dVector(cn)
-
-
-def add_colours(pcd,red,green,blue):
-    e = np.zeros(shape = [len(intensities)])
-
-    r = red/max(red)
-    g = green
-    b = blue
-
-    print("sum:",np.sum(red),np.sum(green),np.sum(blue))
-
-    print(r[-20:],g[-20:],b[-20:])
-
-    cn = np.dstack([r,g,b])[0]
-
-    print(cn.shape,xyz.shape)
-    pcd.colors = o3d.utility.Vector3dVector(cn.astype(np.float64))
-
-    print(pcd.has_colors())
-
+    
+    add_colours(pcd,c1,c2,c3)
 
 def add_intensity(pcd,intensities):
     e = np.zeros(shape = [len(intensities)])
@@ -223,15 +211,7 @@ def add_intensity(pcd,intensities):
     c2 = intensities/max(intensities)
     c3 = intensities/max(intensities)
 
-    print(np.sum(c1)/len(c1),np.sum(c2)/len(c2),np.sum(c3)/len(c3))
-
-    cn = np.dstack([c1,c2,c3])[0]
-
-
-    print(cn.shape,xyz.shape)
-    pcd.colors = o3d.utility.Vector3dVector(cn.astype(np.float64))
-
-    print(pcd.has_colors())
+    add_colours(pcd,c1,c2,c3)
 
 
 #----------------------------------FUNCTION DEFINITION END------------------------------------#
