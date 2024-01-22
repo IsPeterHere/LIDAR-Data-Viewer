@@ -9,7 +9,7 @@ import pyrr
 #user defined stuff
 
 #folder (within Datasets)
-folder = "HareHope"
+folder = "Edinburgh"
 
 #colour_map picks between no colour, "normal" map, "intensity"(if included in laz file)
 colour_map = ""
@@ -22,11 +22,11 @@ display_logs = True
 
 #returns bounding data within Bounds.txt file in folder, if file exists
 def read_bounds(folder):
-    if path.exists(f"Datasets/{folder}/Bounds.txt"):
+    if path.exists(f"../Datasets/{folder}/Bounds.txt"):
         if display_logs:
             print("Bounds.txt Found")
 
-        with open(f"Datasets/{folder}/Bounds.txt") as f:
+        with open(f"../Datasets/{folder}/Bounds.txt") as f:
             data = f.read().splitlines()
             data = [x for x in data if "#" not in x and len(x) > 0]
             data = [x.split(";")[1] for x in data]
@@ -48,8 +48,8 @@ def read_bounds(folder):
 
         bs = [[0,0],[1,1]] 
         r = [0,0,0] 
-        amax = 1_000_000
-        amin = -1_000_000
+        amax = 10_000_000
+        amin = -10_000_000
     
     bounds = bs,r,amax,amin
 
@@ -68,14 +68,16 @@ def read_bounds(folder):
 
 #reads out 3 arrays of x,y,z coordinates
 def read_data(folder):
-    paths = [f for f in listdir(f'Datasets/{folder}') if f.endswith(".laz")]
-    laslist = [laspy.read(f'Datasets/{folder}/{path}') for path in paths]
+    paths = [f for f in listdir(f'../Datasets/{folder}') if f.endswith(".laz")]
+    laslist = [laspy.read(f'../Datasets/{folder}/{path}') for path in paths]
 
     x = laslist[0].X
     y = laslist[0].Y
     z = laslist[0].Z
 
     intensities = np.asarray(laslist[0].intensity,dtype="float64")
+
+    print(list(laslist[0].point_format.dimension_names))
     """
     red = np.asarray(laslist[0].scan_angle_rank,dtype="float64")
     green = np.asarray(laslist[0].green,dtype="float64")
@@ -104,11 +106,10 @@ def apply_bounds(x,y,z,bounds):
     sizex = max(x)-min(x)
     sizey = max(y)-min(y)
 
-    box_x = bs[0][1]*sizex
-    box_a = bs[1][1]*sizex
-    
+    box_x = bs[1][0]*sizex
     box_y = bs[1][1]*sizey
-    box_b = bs[0][0]*sizey
+    box_a = bs[0][0]*sizex
+    box_b = bs[0][1]*sizey
 
     centre = [box_a+((box_x-box_a)/2),box_b+((box_y-box_b)/2),0]
 
@@ -171,6 +172,7 @@ def create_pointcloud(xyz):
 
 
 def crop_pointcloud(pcd):
+    print(pcd)
     vol = o3d.visualization.read_selection_polygon_volume("bound.json")
     selected_pcd = vol.crop_point_cloud(pcd)
 
