@@ -1,0 +1,10 @@
+#version 400
+
+in float height;
+uniform float max;
+
+void main() {
+ float normalizedHeight = height/max;
+ vec4 color = vec4(normalizedHeight,normalizedHeight, normalizedHeight,1.0);
+ gl_FragColor = color;
+}
