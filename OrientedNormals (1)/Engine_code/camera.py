@@ -1,6 +1,5 @@
-from ctypes.wintypes import tagPOINT
 from re import S
-from pyrr import Vector3, vector, vector3, matrix44, Quaternion
+from pyrr import Vector3,Vector4, vector, vector3, matrix44,matrix33, Quaternion
 from math import sin, cos, radians
 import numpy as np
 
@@ -42,24 +41,24 @@ class Camera:
         self.pitch += self.yoffset
 
         
-        if self.pitch > 360:
-            self.pitch -= 360
-        elif self.pitch < -360:
-            self.pitch += 360
+        if self.pitch > 89:
+            self.pitch = 89
+        elif self.pitch < -89:
+            self.pitch = -89
             
         if self.jaw > 360:
             self.jaw -= 360
         elif self.jaw < -360:
-            self.jaw += 360
+            self.jaw +=360
 
         self.update_camera_vectors()
 
     def update_camera_vectors(self):
         
-        rot = matrix44.create_from_eulers([radians(self.pitch),radians(self.jaw),0])
+        rot = matrix33.create_from_eulers([radians(self.pitch),radians(self.jaw),0])
         
         up = Vector3([0,0,1])
-        self.camera_front = Quaternion.from_matrix(rot) * Vector3([1.0,1.0,1.0]) 
+        self.camera_front = rot @ Vector3([0.0,1.0,0.0])
         self.camera_right = np.cross(self.camera_front,up)
 
         self.VIEW_MATRIX = matrix44.create_look_at(self.camera_pos, self.camera_pos + self.camera_front, up)

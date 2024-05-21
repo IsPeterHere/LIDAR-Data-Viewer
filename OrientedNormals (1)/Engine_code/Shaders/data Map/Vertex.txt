@@ -1,0 +1,51 @@
+# version 330 core
+layout(location = 0) in vec3 a_position;
+layout(location = 1) in vec3 a_data;
+
+
+out vec4 x_Color;
+
+uniform mat4 projection;
+uniform mat4 view;
+
+uniform int scale;
+uniform float alpha;
+uniform float beta;
+uniform int c_ID;
+
+void main()
+{
+    float r = 1/exp(max(0,a_data.x/alpha));
+    float g = 1/exp(max(0,a_data.y/beta));
+    float b = 1/exp(max(0,(a_data.z-1)/beta));
+
+    if (c_ID == 0) {
+        x_Color = vec4(r,r,r,0.75);
+    } else if (c_ID == 1) {
+        x_Color = vec4(g,g,g,0.75);
+    } else if (c_ID == 2) {
+        x_Color = vec4(1-b,1-b,1-b,0.75);
+
+
+    } else if (c_ID == 3) {
+       float c = min(1-g,r);
+       x_Color = vec4(c,c,c,0.75);
+    } else if (c_ID == 4) {
+       float c = max(1-g,r);
+       x_Color = vec4(c,c,c,0.75);
+    } else if (c_ID == 5) {
+       float c = (-1+g+r)/2;
+       x_Color = vec4(c,c,c,0.75);
+
+    } else if (c_ID == 6) {
+        x_Color = vec4((1-r)*b,(1-g)*b,1-b,0.75);
+    }else {
+        x_Color = vec4(1,1,1,1);
+    }
+
+    gl_Position = projection * view * vec4(a_position, 1.0);
+
+    vec4 cs_position = view * vec4(a_position, 1.0);
+    gl_PointSize =  -1/(cs_position.z)*scale;
+
+}

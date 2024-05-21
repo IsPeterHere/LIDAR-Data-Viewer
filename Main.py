@@ -9,24 +9,28 @@ import pyrr
 #user defined stuff
 
 #folder (within Datasets)
-folder = "Edinburgh"
+folder = "Tap o Noth"
 
 #colour_map picks between no colour, "normal" map, "intensity"(if included in laz file)
-colour_map = ""
+colour_map = "normal"
+normal_radius = 100_000
+mx_normal_bodies = 800
 
 #dev stuff
 display_logs = True
 
+#save as file
+save_name = ""
 
 #----------------------------------FUNCTION DEFINITION START----------------------------------#
 
 #returns bounding data within Bounds.txt file in folder, if file exists
 def read_bounds(folder):
-    if path.exists(f"../Datasets/{folder}/Bounds.txt"):
+    if path.exists(f"Datasets/{folder}/Bounds.txt"):
         if display_logs:
             print("Bounds.txt Found")
 
-        with open(f"../Datasets/{folder}/Bounds.txt") as f:
+        with open(f"Datasets/{folder}/Bounds.txt") as f:
             data = f.read().splitlines()
             data = [x for x in data if "#" not in x and len(x) > 0]
             data = [x.split(";")[1] for x in data]
@@ -68,8 +72,8 @@ def read_bounds(folder):
 
 #reads out 3 arrays of x,y,z coordinates
 def read_data(folder):
-    paths = [f for f in listdir(f'../Datasets/{folder}') if f.endswith(".laz")]
-    laslist = [laspy.read(f'../Datasets/{folder}/{path}') for path in paths]
+    paths = [f for f in listdir(f'Datasets/{folder}') if f.endswith(".laz")]
+    laslist = [laspy.read(f'Datasets/{folder}/{path}') for path in paths]
 
     x = laslist[0].X
     y = laslist[0].Y
@@ -192,7 +196,7 @@ def add_colours(pcd,red,green,blue):
 
 
 def convert_to_normalmap(pcd):
-    pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=1000, max_nn=10))
+    pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=normal_radius, max_nn=mx_normal_bodies))
     normals = np.asarray(pcd.normals)
     normals = ((normals - normals.min(axis=0)) / (normals.max(axis=0) - normals.min(axis=0)))
 
@@ -237,3 +241,19 @@ pcd = crop_pointcloud(pcd)
 
 # Display the selected point cloud
 o3d.visualization.draw_geometries([pcd])
+
+if save_name != "":
+    data = np.asarray(pcd.points,dtype="float32")
+     
+    header = laspy.LasHeader(point_format=3, version="1.2")
+    header.offsets = np.min(data, axis=0)
+    header.scales = np.array([0.1, 0.1, 0.1])
+
+    # 2. Create a Las
+    las = laspy.LasData(header)
+
+    las.x = data[:, 0]
+    las.y = data[:, 1]
+    las.z = data[:, 2]
+
+    las.write(f"Datasets/{folder}/{save_name}.laz")
