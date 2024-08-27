@@ -128,6 +128,12 @@ class APP(Call_backs):
         if MAP_TYPE == "data":
             vertex,fragment = "LIDAR-Data-Viewer\OrientedNormals (1)\Engine_code\Shaders\data Map\Vertex.txt","LIDAR-Data-Viewer\OrientedNormals (1)\Engine_code\Shaders\data Map\Fragment.txt"
             
+        elif MAP_TYPE == "Colour":
+            vertex,fragment = "Engine_code\Shaders\Colour Map\Vertex.txt","Engine_code\Shaders\Colour Map\Fragment.txt"
+            
+        elif MAP_TYPE == "Height":
+            vertex,fragment = "Engine_code\Shaders\Height Map\Vertex.txt","Engine_code\Shaders\Height Map\Fragment.txt"
+            
  
         self.shader = Shader(vertex,fragment)
         

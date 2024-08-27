@@ -12,7 +12,7 @@ class Camera:
         self.camera_up = Vector3([0.0, 1.0, 0.0])
         self.camera_right = Vector3([1.0, 0.0, 0.0])
 
-        self.jaw = -90
+        self.yaw = -90
         self.pitch = 0
 
         self.xoffset = 0
@@ -37,7 +37,7 @@ class Camera:
         self.xoffset *= mouse_sensitivity
         self.yoffset *= mouse_sensitivity
 
-        self.jaw -= self.xoffset
+        self.yaw -= self.xoffset
         self.pitch += self.yoffset
 
         
@@ -46,22 +46,22 @@ class Camera:
         elif self.pitch < -89:
             self.pitch = -89
             
-        if self.jaw > 360:
-            self.jaw -= 360
-        elif self.jaw < -360:
-            self.jaw +=360
+        if self.yaw > 360:
+            self.yaw -= 360
+        elif self.yaw < -360:
+            self.yaw +=360
 
         self.update_camera_vectors()
 
     def update_camera_vectors(self):
         
-        rot = matrix33.create_from_eulers([radians(self.pitch),radians(self.jaw),0])
+        rot = matrix33.create_from_eulers([radians(self.pitch),radians(self.yaw),0])
         
         up = Vector3([0,0,1])
         self.camera_front = rot @ Vector3([0.0,1.0,0.0])
         self.camera_right = np.cross(self.camera_front,up)
 
-        self.VIEW_MATRIX = matrix44.create_look_at(self.camera_pos, self.camera_pos + self.camera_front, up)
+        self.VIEW_MATRIX = matrix44.create_look_at(self.camera_pos, self.camera_pos + self.camera_front, self.camera_up)
         
 
     def do_movement(self,velocity):

@@ -1,20 +1,25 @@
 import open3d as o3d
 import laspy
+import pye57
 import numpy as np
 from os import listdir
 from os import path
 import pyrr
+import random
 
 
 #user defined stuff
 
-#folder (within Datasets)
-folder = "Tap o Noth"
+#folder path" (within Datasets) e.g. "Edinburgh"
+folder = "Scotland/Glasgow"
 
-#colour_map picks between no colour, "normal" map, "intensity"(if included in laz file)
-colour_map = "normal"
+#colour_map picks between no colour (defaults to height map), "normal" map, "intensity"(if included in laz file), and "colour"
+colour_map = ""
 normal_radius = 100_000
 mx_normal_bodies = 800
+
+#preferred file format (las,e57)
+file_preference = "las"
 
 #dev stuff
 display_logs = True
@@ -71,35 +76,178 @@ def read_bounds(folder):
 
 
 #reads out 3 arrays of x,y,z coordinates
-def read_data(folder):
-    paths = [f for f in listdir(f'Datasets/{folder}') if f.endswith(".laz")]
-    laslist = [laspy.read(f'Datasets/{folder}/{path}') for path in paths]
+def read_data_las(folder):
+    paths = [f for f in listdir(f'../Datasets/{folder}') if f.endswith(".laz") or f.endswith(".las") or f.endswith(".LAS")][5:7]
+    laslist = [laspy.read(f'../Datasets/{folder}/{path}') for path in paths]
 
     x = laslist[0].X
     y = laslist[0].Y
     z = laslist[0].Z
 
-    intensities = np.asarray(laslist[0].intensity,dtype="float64")
+    intensities = None
+    red = green = blue = None
+    
+    if do_intensity := ((colour_map == "intensity" or colour_map == "mix") and "intensity" in laslist[0].point_format.dimension_names and np.sum(laslist[0].intensity[:1000]) != 0):
+        intensities = np.asarray(laslist[0].intensity)
 
     print(list(laslist[0].point_format.dimension_names))
-    """
-    red = np.asarray(laslist[0].scan_angle_rank,dtype="float64")
-    green = np.asarray(laslist[0].green,dtype="float64")
-    blue = np.asarray(laslist[0].blue,dtype="float64")"""
+    print(laslist[0].header.version)
+
+    if do_colour := (colour_map == "colour" and "red" in laslist[0].point_format.dimension_names):
+        red = np.asarray(laslist[0].red)
+        green = np.asarray(laslist[0].green)
+        blue = np.asarray(laslist[0].blue)
 
     for las in laslist[1:]:
         x = np.append(x,las.X + (1_000 * (las.header.x_offset - laslist[0].header.x_offset)))
         y = np.append(y,las.Y + (1_000 * (las.header.y_offset - laslist[0].header.y_offset)))
         z = np.append(z,las.Z + (1_000 * (las.header.z_offset - laslist[0].header.z_offset)))
+        
+        if do_intensity:
+            intensities = np.append(intensities,las.intensity)
 
-        intensities = np.append(intensities,np.asarray(las.intensity,dtype="float64"))
-        """red = np.append(red,np.asarray(las.scan_angle_rank,dtype="float64"))
-        green = np.append(green,np.asarray(las.green,dtype="float64"))
-        blue = np.append(blue,np.asarray(las.blue,dtype="float64"))"""
+        if do_colour:
+            red = np.append(red,np.asarray(las.red))
+            green = np.append(green,np.asarray(las.green))
+            blue = np.append(blue,np.asarray(las.blue))
 
     #print(len(intensities),len(x),len(blue))
-    return x,y,z,intensities#,red,green,blue
+    return x,y,z,intensities,red,green,blue
 
+
+def read_data_e57(folder):
+    paths = [f for f in listdir(f'../Datasets/{folder}') if f.endswith(".e57")]
+    e57 = [pye57.E57(f'../Datasets/{folder}/{path}') for path in paths]
+    data = e57[0].read_scan(index=0, ignore_missing_fields=True, colors=True, intensity=True)
+
+    print(len(e57[0].data3d))
+
+    header = e57[0].get_header(0)
+    print(header.point_fields)
+
+    intensities = None
+    red = green = blue = None
+
+    x = data["cartesianX"]
+    y = data["cartesianY"]
+    z = data["cartesianZ"]
+
+    
+    if do_intensity := ((colour_map == "intensity" or colour_map == "mix") and "intensity" in header.point_fields and np.sum(data["intensity"][:1000]) != 0):
+        intensities = np.asarray(data["intensity"])
+
+    if do_colour := (colour_map == "colour" and "colorRed" in header.point_fields and np.sum(data["colorRed"][:1000]) != 0):
+        red = np.asarray(data["colorRed"])
+        green = np.asarray(data["colorGreen"])
+        blue = np.asarray(data["colorBlue"])
+    
+
+    for file in e57[1:]:
+        data = file.read_scan(index=0, ignore_missing_fields=True, colors=True, intensity=True)
+
+        x = np.append(x, data["cartesianX"])
+        y = np.append(y, data["cartesianY"])
+        z = np.append(z, data["cartesianZ"])
+        
+        if do_intensity:
+            intensities = np.append(intensities, np.asarray(data["intensity"]))
+
+        if do_colour:
+            red = np.append(red, np.asarray(data["colorRed"]))
+            green = np.append(green, np.asarray(data["colorGreen"]))
+            blue = np.append(blue, np.asarray(data["colorBlue"]))
+
+    return x,y,z,intensities,red,green,blue
+
+#----------------------------------------------------------------------------------------------WIP
+def read_data_e57_polar(folder):
+    paths = [f for f in listdir(f'../Datasets/{folder}') if f.endswith(".e57")]
+    e57 = [pye57.E57(f'../Datasets/{folder}/{path}') for path in paths]
+
+    header = e57[0].get_header(0)
+    print(len(e57[0].data3d))
+    print(header.point_fields)
+    print(header.scan_fields)
+
+    x = np.asarray([])
+    y = np.asarray([])
+    z = np.asarray([])
+
+    red = np.asarray([])
+    green = np.asarray([])
+    blue = np.asarray([])
+
+    intensities = None
+
+    for i in range(40,len(e57[0].data3d)):
+        data = e57[0].read_scan(index=i, ignore_missing_fields=True, colors=True, intensity=True,transform=False)
+
+        header = e57[0].get_header(i)
+        print("Translation:",header.translation)
+        print("Rotation:",header.rotation)
+        print("Deg Rotation:",list(map(lambda x:np.degrees(x),header.rotation)))
+        print("Rot Sum:",np.degrees(sum(header.rotation)))
+        print(header.rotation_matrix)
+        print()
+
+        #'sphericalRange', 'sphericalAzimuth', 'sphericalElevation
+        dist = data["sphericalRange"]
+        azimuth = data["sphericalAzimuth"]
+        elevation = data["sphericalElevation"]
+
+        flat = dist*np.cos(elevation)
+
+        # x = np.append(x, flat*np.cos(azimuth) + header.translation[0])
+        # y = np.append(y, flat*np.sin(azimuth) + header.translation[1])
+        # z = np.append(z, dist*np.sin(elevation) + header.translation[2])
+
+        xyz = np.asarray([flat*np.cos(azimuth), flat*np.sin(azimuth), dist*np.sin(elevation)])
+        xyz = np.matmul(header.rotation_matrix, xyz)
+        xarr = xyz[0] + header.translation[0]
+        yarr = xyz[1] + header.translation[1]
+        zarr = xyz[2] + header.translation[2]
+
+        x = np.append(x,xarr)
+        y = np.append(y,yarr)
+        z = np.append(z,zarr)
+
+        red = np.append(red, data["colorRed"])
+        green = np.append(green, data["colorGreen"])
+        blue = np.append(blue, data["colorBlue"])
+
+    """
+    if do_intensity := ((colour_map == "intensity" or colour_map == "mix") and "intensity" in header.point_fields and np.sum(data["intensity"][:1000]) != 0):
+        intensities = np.asarray(data["intensity"])
+
+    if do_colour := (colour_map == "colour" and "colorRed" in header.point_fields and np.sum(data["colorRed"][:1000]) != 0):
+        red = np.asarray(data["colorRed"])
+        green = np.asarray(data["colorGreen"])
+        blue = np.asarray(data["colorBlue"])
+    
+
+    for file in e57[1:]:
+        data = file.read_scan(index=0, ignore_missing_fields=True, colors=True, intensity=True)
+
+        dist = data["sphericalRange"]
+        azimuth = data["sphericalAzimuth"]
+        elevation = data["sphericalElevation"]
+
+        flat = dist*np.cos(elevation)
+
+        x = np.append(x, flat*np.cos(azimuth))
+        y = np.append(y, flat*np.sin(azimuth))
+        z = np.append(z, dist*np.sin(elevation))
+        
+        if do_intensity:
+            intensities = np.append(intensities, np.asarray(data["intensity"]))
+
+        if do_colour:
+            red = np.append(red, np.asarray(data["colorRed"]))
+            green = np.append(green, np.asarray(data["colorGreen"]))
+            blue = np.append(blue, np.asarray(data["colorBlue"]))"""
+
+    return x,y,z,intensities,red,green,blue
+#----------------------------------------------------------------------------------------------WIP
 
 def apply_bounds(x,y,z,bounds):
     bs,r,amax,amin = bounds
@@ -162,7 +310,8 @@ def apply_bounds(x,y,z,bounds):
             """.format(tpl = str(list(tpl)),tpr = str(list(tpr)),btr = str(list(btr)),btl = str(list(btl)),amax = amax,amin = amin ))
 
     xyz = np.dstack([x,y,z])[0]
-    xyz = np.matmul((xyz - centre),rotation.T) 
+    xyz = np.matmul((xyz - centre),rotation.T)
+    xyz = np.matmul(xyz,rotation)
 
     return xyz
 
@@ -178,13 +327,14 @@ def create_pointcloud(xyz):
 def crop_pointcloud(pcd):
     print(pcd)
     vol = o3d.visualization.read_selection_polygon_volume("bound.json")
+    #cl,ind = pcd.remove_statistical_outlier(nb_neighbors=20,std_ratio=2)
+    #inlier_cloud = pcd.select_by_index(ind)
     selected_pcd = vol.crop_point_cloud(pcd)
+
 
     print("Bounding Selected: ",selected_pcd)
 
     return selected_pcd
-
-
 
 
 def add_colours(pcd,red,green,blue):
@@ -193,6 +343,13 @@ def add_colours(pcd,red,green,blue):
     pcd.colors = o3d.utility.Vector3dVector(cn.astype(np.float64))
 
     print("Colours added: ",pcd.has_colors())
+
+def add_colour(pcd,r,g,b):
+    r = r/max(r)
+    g = g/max(g)
+    b = b/max(b)
+
+    add_colours(pcd,r,g,b)
 
 
 def convert_to_normalmap(pcd):
@@ -209,13 +366,33 @@ def convert_to_normalmap(pcd):
     
     add_colours(pcd,c1,c2,c3)
 
+
 def add_intensity(pcd,intensities):
     e = np.zeros(shape = [len(intensities)])
 
-    print(sum(intensities))
+    print(sum(intensities[:1000]))
+    intensities -= min(intensities)
     c1 = intensities/max(intensities)
     c2 = intensities/max(intensities)
     c3 = intensities/max(intensities)
+
+    add_colours(pcd,c1,c2,c3)
+
+
+def mix(pcd,intensities):
+    pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=1500, max_nn=30))
+    normals = np.asarray(pcd.normals)
+    normals = ((normals - normals.min(axis=0)) / (normals.max(axis=0) - normals.min(axis=0)))
+
+    e = np.zeros(shape = [len(normals)])
+
+    c1 = normals@[0,1,0.2]
+    c2 = normals@[1,0,0]
+    c3 = normals@[-1/2,-1.73,0]
+
+    c1 = c1/2 + intensities/max(intensities)/2
+    c2 = c2/2 + intensities/max(intensities)/2
+    c3 = c3/2 + intensities/max(intensities)/2
 
     add_colours(pcd,c1,c2,c3)
 
@@ -224,23 +401,57 @@ def add_intensity(pcd,intensities):
 
 
 bounds = read_bounds(folder)
-x,y,z,intensities = read_data(folder)#,red,green,blue = read_data(folder)
+
+if file_preference == "las":
+    x,y,z,intensities,red,green,blue = read_data_las(folder)
+elif file_preference == "e57":
+    x,y,z,intensities,red,green,blue = read_data_e57(folder)
+elif file_preference == "e57 polar":
+    x,y,z,intensities,red,green,blue = read_data_e57_polar(folder)
 
 xyz = apply_bounds(x,y,z,bounds)
 
 pcd = create_pointcloud(xyz)
 
-if colour_map == "normal":
-    convert_to_normalmap(pcd)
 
-elif colour_map == "intensity":
+
+if colour_map == "intensity" and intensities.any() != None:
     add_intensity(pcd,intensities)
+
+elif colour_map == "colour" and red.any() != None:
+    add_colour(pcd,red,green,blue)
+
+elif colour_map == "mix" and intensities.any() != None:
+    mix(pcd,intensities)
 
 pcd = crop_pointcloud(pcd)
 
+if colour_map == "normal":
+    convert_to_normalmap(pcd)
+"""
+with o3d.utility.VerbosityContextManager(
+        o3d.utility.VerbosityLevel.Debug) as cm:
+    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
+        pcd, depth=14)"""
 
-# Display the selected point cloud
-o3d.visualization.draw_geometries([pcd])
+
+def custom_draw_geometry_with_key_callback(pcd):
+
+    def switch_background_colour(vis):
+        opt = vis.get_render_option()
+        if list(opt.background_color) == [1,1,1]:
+            col = [0.029, 0.186, 0.169]
+        else:
+            col = [1,1,1]
+        opt.background_color = np.asarray(col)
+
+    key_to_callback = {}
+    key_to_callback[ord("K")] = switch_background_colour
+    o3d.visualization.draw_geometries_with_key_callbacks([pcd], key_to_callback, width=1920, height=1080)
+
+
+custom_draw_geometry_with_key_callback(pcd)
+#o3d.visualization.draw_geometries([pcd])
 
 if save_name != "":
     data = np.asarray(pcd.points,dtype="float32")
