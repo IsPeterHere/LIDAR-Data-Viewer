@@ -9,9 +9,9 @@ import open3d as o3d
 #user defined stuff
 
 #folder (within Datasets)
-folder = "Roman Fort"
+folder = "Tap o Noth"
 
-
+meters = 10000
 
 #----------------------------------FUNCTION DEFINITION START----------------------------------#
 
@@ -47,19 +47,19 @@ def frame_funtion():
         app.shader.set_int("scale",app.scale)
 
     if "[" in app.keys_being_held:
-        app.alpha -= 0.1
+        app.alpha -= 0.3
         app.shader.set_float("alpha",app.alpha)
 
     elif "]" in app.keys_being_held:
-        app.alpha +=0.1
+        app.alpha += 0.3
         app.shader.set_float("alpha",app.alpha)
 
     if ";" in app.keys_being_held:
-        app.beta -= 0.1
+        app.beta -= 0.3
         app.shader.set_float("beta",app.beta)
 
     elif "'" in app.keys_being_held:
-        app.beta +=0.1
+        app.beta +=0.3
         app.shader.set_float("beta",app.beta)
         
     if "1" in app.keys_being_held:
@@ -93,12 +93,14 @@ xyz = np.dstack([x,y,z])[0]
 with open(f'Datasets/{folder}/Inclusion_data.txt',"r") as f:
     indexes = np.array([int(x) for x in f.read().split("|")],dtype="int32")
 with open(f'Datasets/{folder}/Point_data.txt',"r") as f:
-    data = np.array([[int(y) for y in x.split(",")] for x in f.read().split("|")],dtype="int32")
+    data = np.array([[float(y) for y in x.split(",")] for x in f.read().split("|")],dtype="int32")
 
 
 
 print(data[200:230])
+print(max(data[:,0]),min(data[:,0]))
 xyz = xyz[indexes]
+xyz = np.dstack([ xyz[:,0]/meters, xyz[:,1]/meters, xyz[:,2]/meters])[0]
 
 #2000 = 0.955
 #1500 = 0.925
@@ -111,5 +113,5 @@ app = APP(1280,720)
 app.camera.free_look = True
 app.cursor(False)
 
-app.set_clear_colour([0.12,0.14,0.11,0])
-app.start("data",xyz/1000,data = data,frame_function=frame_funtion)
+app.set_clear_colour([0.4,0.42,0.4,1])
+app.start("data",xyz,data = data,frame_function=frame_funtion)

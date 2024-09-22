@@ -34,7 +34,7 @@ class Call_backs:
         glfw.set_key_callback(self.window, self.key_input_clb)
         
     def create_projection(self):
-        projection = pyrr.matrix44.create_perspective_projection_matrix(45, self.WIDTH / self.HEIGHT, 0.1, 1000)
+        projection = pyrr.matrix44.create_perspective_projection_matrix(45, self.WIDTH / self.HEIGHT, 0.1, 200)
         self.shader.set_mat4("projection",projection)
 
     def window_resize(self,window, width, height):
@@ -104,45 +104,31 @@ class APP(Call_backs):
          
         glClearColor(0.1,0.2,0.2,1)
         glEnable(GL_PROGRAM_POINT_SIZE)
-        glEnable (GL_POINT_SMOOTH)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_BLEND)
-
-        glBlendEquation(GL_FUNC_ADD)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
 
         #-------------USER STUFF-------------------------
 
         #The scale factor for the size of the points
         self.scale = 45
         
-        self.alpha = 10
-        self.beta = 10
         
-        self.c_ID = 0
-    
 
-    def start(self,MAP_TYPE,points,data = None,frame_function = None, closing_function = None):
+
+    def start(self,MAP_TYPE,points,colours = None,frame_function = None, closing_function = None):
         
         #--------start_up of shader------------
         
-        if MAP_TYPE == "data":
-            vertex,fragment = "LIDAR-Data-Viewer\OrientedNormals (1)\Engine_code\Shaders\data Map\Vertex.txt","LIDAR-Data-Viewer\OrientedNormals (1)\Engine_code\Shaders\data Map\Fragment.txt"
-            
-        elif MAP_TYPE == "Colour":
-            vertex,fragment = "Engine_code\Shaders\Colour Map\Vertex.txt","Engine_code\Shaders\Colour Map\Fragment.txt"
+        if MAP_TYPE == "Colour":
+            vertex,fragment = "LIDAR-Data-Viewer\Engine_code\Shaders\Colour Map\Vertex.txt","LIDAR-Data-Viewer\Engine_code\Shaders\Colour Map\Fragment.txt"
             
         elif MAP_TYPE == "Height":
-            vertex,fragment = "Engine_code\Shaders\Height Map\Vertex.txt","Engine_code\Shaders\Height Map\Fragment.txt"
+            vertex,fragment = "LIDAR-Data-Viewer\Engine_code\Shaders\Height Map\Vertex.txt","LIDAR-Data-Viewer\Engine_code\Shaders\Height Map\Fragment.txt"
             
- 
         self.shader = Shader(vertex,fragment)
-        
-        #set initial constants
         self.shader.set_int("scale",self.scale)
-        self.shader.set_float("alpha",self.alpha)
-        self.shader.set_float("beta",self.beta)
-        self.shader.set_int("c_ID",self.c_ID)
         
         #set up initial projection matrix
         self.create_projection()
@@ -162,20 +148,27 @@ class APP(Call_backs):
         
 
         #--------Map Type specifics------------
-        if MAP_TYPE == "data":
+        if MAP_TYPE == "Colour":
         
-            self.data = data.flatten()
-            self.data = self.data.astype(np.float32)
+            self.colours = colours.flatten()
+            self.colours = self.colours.astype(np.float32)
         
-            position = glGetAttribLocation(self.shader.shader, "a_data")  
+            position = glGetAttribLocation(self.shader.shader, "a_Color")  
        
             VBO = glGenBuffers(1)
             glBindBuffer(GL_ARRAY_BUFFER, VBO)
-            glBufferData(GL_ARRAY_BUFFER, self.data.nbytes, self.data, GL_STATIC_DRAW)
+            glBufferData(GL_ARRAY_BUFFER, self.colours.nbytes, self.colours, GL_STATIC_DRAW)
         
-            glVertexAttribPointer(position, 3, GL_FLOAT , GL_FALSE, 3*4, ctypes.c_void_p(0))
+            glVertexAttribPointer(position, 3, GL_FLOAT , GL_FALSE, 3 * 4, ctypes.c_void_p(0))
             glEnableVertexAttribArray(position)
             
+        elif MAP_TYPE == "Height":
+            self.max_height = max(points[:][2])
+            self.shader.set_float("max",self.max_height)
+        
+
+
+
         #--------Bind user functions------------
         
         def f():
@@ -224,6 +217,7 @@ class APP(Call_backs):
 
             view = self.camera.get_view_matrix()
             self.shader.set_mat4("view",view)
+            
             #-----drawing
             
             glDrawArrays(GL_POINTS, 0, len(self.points)//3)
@@ -242,10 +236,10 @@ class APP(Call_backs):
             glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_NORMAL)
         else:
             glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_DISABLED)
-            
-    def set_clear_colour(self,rgb):
-        glClearColor(rgb[0],rgb[1],rgb[2],rgb[3])
-        
+
     def quit(self):
         self.closing_function()
         self.shader.quit()
+
+        quit()
+

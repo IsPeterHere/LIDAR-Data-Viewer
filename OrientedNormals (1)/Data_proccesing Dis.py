@@ -7,36 +7,31 @@ from os import listdir
 import scipy
 import open3d as o3d
 
-"""
+
 folder = "Tap o Noth"  #name of folder (within Datasets)
 meters = 10_000        #how many units is a meter
 
 
 
 neighbor_radius = 2.75 * meters
-pick = 85
+pick = 25
 
-normal_radius = 10*meters
-mx_normal_bodies = 900
-
-lower = 0.15*meters
-upper = 1*meters
+normal_radius = 3*meters
+mx_normal_bodies = 650
 
 """
-folder = "White Meldon"  #name of folder (within Datasets)
+
+folder = "Roman Fort"  #name of folder (within Datasets)
 meters = 1_000        #how many units is a meter
 
 
 
 neighbor_radius = 2.2 * meters
-pick = 55
+pick = 25
 
 normal_radius = 3*meters
 mx_normal_bodies = 650
-
-lower = 0.01*meters
-upper = 0.5*meters
-
+"""
 #----------------------------------FUNCTION DEFINITION START----------------------------------#
 
 #reads out 3 arrays of x,y,z coordinates
@@ -122,17 +117,17 @@ def proccess_data(order_counter,order,true_order,xyz,name):
     dot_product = np.sum(diffs * normals[:, np.newaxis],axis = -1)
     print("Dots Done")
 
-    lower_neg_Ticks = np.sum((dot_product < -lower ), axis = 1)
-    lower_pos_Ticks = np.sum((dot_product > lower ), axis = 1)
+    n =  np.where(dot_product < 0,dot_product,0 )
+    p =  np.where(dot_product > 0,dot_product,0 )
+    neg = np.sum(n, axis = 1)
+    pos = np.sum(p, axis = 1)
     
-    upper_neg_Ticks = np.sum((dot_product >= -upper ), axis = 1)
-    upper_pos_Ticks = np.sum((dot_product <= upper ), axis = 1)
     
     rest_Ticks = np.sum((dot_product != None ), axis = 1) 
     
-    Ticks = np.dstack([lower_neg_Ticks-(rest_Ticks-upper_neg_Ticks),
-                       lower_pos_Ticks-(rest_Ticks-upper_pos_Ticks),
-                       (rest_Ticks-lower_neg_Ticks-lower_pos_Ticks)+(rest_Ticks-upper_neg_Ticks)+(rest_Ticks-upper_pos_Ticks)])[0]
+    Ticks = np.dstack([-neg,
+                       pos,
+                       np.zeros(len(pos))])[0]
     
     if name == "conjunction":
         comp = set(processed_neighbor_indexes[:,0])
