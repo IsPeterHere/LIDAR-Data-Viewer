@@ -5,13 +5,13 @@ from os import listdir
 from os import path
 import pyrr
 
-folders = listdir("Datasets")
+folders = listdir("../Datasets")
 
 def read_data(folder):
     print(folder)
 
-    paths = [f for f in listdir(f'Datasets/{folder}') if f.endswith(".laz")]
-    laslist = [laspy.read(f'Datasets/{folder}/{path}') for path in paths]
+    paths = [f for f in listdir(f'../Datasets/{folder}') if f.endswith(".laz")]
+    laslist = [laspy.read(f'../Datasets/{folder}/{path}') for path in paths]
 
     
     print(list(laslist[0].point_format.dimension_names))
